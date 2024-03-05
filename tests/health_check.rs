@@ -1,4 +1,5 @@
 use bookstore_api::run;
+use sqlx::PgPool;
 use std::net::TcpListener;
 
 async fn spawn_app() -> String {
@@ -8,7 +9,12 @@ async fn spawn_app() -> String {
         .expect("Failed to get local address")
         .to_string();
 
-    let server = run(tcp_listener).expect("Failed to bind address");
+    let db_connection =
+        PgPool::connect("postgres://postgres:password@localhost:5432/bookstore_api")
+            .await
+            .expect("Failed to connect to Postgres.");
+
+    let server = run(tcp_listener, db_connection).expect("Failed to bind address");
     tokio::spawn(server);
 
     address
