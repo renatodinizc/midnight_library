@@ -1,6 +1,6 @@
-use sqlx::PgPool;
-
 use bookstore_api::{configuration, run};
+use chrono::Utc;
+use sqlx::{Executor, PgPool};
 use std::net::TcpListener;
 
 struct TestApp {
@@ -14,17 +14,42 @@ async fn spawn_app() -> TestApp {
         .local_addr()
         .expect("Failed to get local address")
         .to_string();
-    let config = configuration::get_configuration().expect("Failed to read configuration.");
 
-    let db_pool = PgPool::connect(config.database.database_url().as_str())
-        .await
-        .expect("Failed to connect to Postgres.");
+    let db_pool = setup_db().await;
 
     let server = run(tcp_listener, db_pool.clone()).expect("Failed to bind address");
     tokio::spawn(server);
 
     TestApp { address, db_pool }
 }
+
+async fn setup_db() -> PgPool {
+    let config = configuration::get_configuration().expect("Failed to read configuration.");
+
+    let db_url = format!(
+        "postgres://{}:{}@{}:{}",
+        config.database.username,
+        config.database.password,
+        config.database.host,
+        config.database.port,
+    );
+
+    let db_pool = PgPool::connect(&db_url)
+        .await
+        .expect("Failed to connect to Postgres.");
+    db_pool
+        .execute(format!(r#"CREATE DATABASE "{}";"#, Utc::now()).as_str())
+        .await
+        .expect("Failed to create database.");
+
+    sqlx::migrate!("./migrations")
+        .run(&db_pool)
+        .await
+        .expect("Failed to migrate the database");
+
+    db_pool
+}
+
 
 #[tokio::test]
 async fn book_creation() {
