@@ -15,7 +15,7 @@ async fn spawn_app() -> String {
 }
 
 #[tokio::test]
-async fn test_book_creation() {
+async fn book_creation() {
     let address = spawn_app().await;
     let client = reqwest::Client::new();
     let body = r#"{"title":"Harry Potter and the philosopher's stone", "author":"JK Rowling", "genre": "Fiction"}"#;
@@ -33,7 +33,24 @@ async fn test_book_creation() {
 }
 
 #[tokio::test]
-async fn test_books_index() {
+async fn book_creation_with_incomplete_data() {
+    let address = spawn_app().await;
+    let client = reqwest::Client::new();
+    let body = r#"{"title":"Harry Potter and the philosopher's stone"}"#;
+
+    let response = client
+        .post(format!("http://{}/books/create", address))
+        .header("Content-Type", "application/json")
+        .body(body)
+        .send()
+        .await
+        .expect("Failed to execute request.");
+
+    assert!(response.status().is_client_error());
+}
+
+#[tokio::test]
+async fn books_index() {
     let address = spawn_app().await;
     let client = reqwest::Client::new();
 

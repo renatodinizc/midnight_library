@@ -15,7 +15,7 @@ async fn spawn_app() -> String {
 }
 
 #[tokio::test]
-async fn test_health_check() {
+async fn health_check() {
     let address = spawn_app().await;
     let client = reqwest::Client::new();
 
