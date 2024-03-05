@@ -13,7 +13,7 @@ pub fn run(address: TcpListener) -> Result<Server, std::io::Error> {
         App::new()
             .route("/health_check", web::get().to(health_check))
             .route("/books", web::get().to(routes::books))
-            .route("/book/create", web::post().to(routes::create_book))
+            .route("/books/create", web::post().to(routes::create_book))
     })
     .listen(address)?
     .run();

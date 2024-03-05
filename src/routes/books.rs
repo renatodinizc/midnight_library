@@ -1,4 +1,4 @@
-use actix_web::web;
+use actix_web::{web, HttpResponse};
 
 #[derive(serde::Deserialize)]
 pub struct BookData {
@@ -7,10 +7,10 @@ pub struct BookData {
     genre: String,
 }
 
-pub async fn books() -> String {
-  "books endpoint".to_string()
+pub async fn books() -> HttpResponse {
+  HttpResponse::Ok().finish()
 }
 
-pub async fn create_book(input: web::Json<BookData>) -> String {
-  format!("title: {}, author: {}, genre: {}", input.title, input.author, input.genre)
+pub async fn create_book(input: web::Json<BookData>) -> HttpResponse {
+  HttpResponse::Ok().finish()
 }
