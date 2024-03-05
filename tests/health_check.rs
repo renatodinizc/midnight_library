@@ -1,4 +1,4 @@
-use bookstore_api::run;
+use bookstore_api::{configuration, run};
 use sqlx::PgPool;
 use std::net::TcpListener;
 
@@ -9,8 +9,10 @@ async fn spawn_app() -> String {
         .expect("Failed to get local address")
         .to_string();
 
+    let config = configuration::get_configuration().expect("Failed to read configuration.");
+
     let db_connection =
-        PgPool::connect("postgres://postgres:password@localhost:5432/bookstore_api")
+        PgPool::connect(config.database.database_url().as_str())
             .await
             .expect("Failed to connect to Postgres.");
 
