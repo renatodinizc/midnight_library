@@ -1,10 +1,12 @@
 use bookstore_api::{configuration, run};
-use chrono::Utc;
 use sqlx::{Executor, PgPool};
 use std::net::TcpListener;
+use uuid::Uuid;
 
 struct TestApp {
     address: String,
+    db_pool: PgPool,
+    db_name: Uuid,
 }
 
 async fn spawn_app() -> TestApp {
@@ -14,15 +16,19 @@ async fn spawn_app() -> TestApp {
         .expect("Failed to get local address")
         .to_string();
 
-    let db_pool = setup_db().await;
+    let (db_pool, db_name) = setup_db().await;
 
     let server = run(tcp_listener, db_pool.clone()).expect("Failed to bind address");
     tokio::spawn(server);
 
-    TestApp { address }
+    TestApp {
+        address,
+        db_pool,
+        db_name,
+    }
 }
 
-async fn setup_db() -> PgPool {
+async fn setup_db() -> (PgPool, Uuid) {
     let config = configuration::get_configuration().expect("Failed to read configuration.");
 
     let db_url = format!(
@@ -33,11 +39,13 @@ async fn setup_db() -> PgPool {
         config.database.port,
     );
 
+    let random_db_name = Uuid::new_v4();
+
     let db_pool = PgPool::connect(&db_url)
         .await
         .expect("Failed to connect to Postgres.");
     db_pool
-        .execute(format!(r#"CREATE DATABASE "{}";"#, Utc::now()).as_str())
+        .execute(format!(r#"CREATE DATABASE "{}";"#, random_db_name).as_str())
         .await
         .expect("Failed to create database.");
 
@@ -46,7 +54,14 @@ async fn setup_db() -> PgPool {
         .await
         .expect("Failed to migrate the database");
 
+    (db_pool, random_db_name)
+}
+
+async fn drop_db(name: Uuid, db_pool: PgPool) {
     db_pool
+        .execute(format!(r#"DROP DATABASE "{}";"#, name).as_str())
+        .await
+        .expect("Failed to create database.");
 }
 
 #[tokio::test]
@@ -62,4 +77,6 @@ async fn health_check() {
 
     assert!(response.status().is_success());
     assert_eq!(Some(0), response.content_length());
+
+    drop_db(app.db_name, app.db_pool).await;
 }
