@@ -94,12 +94,21 @@ async fn drop_db(name: String, db_url: String) {
 async fn books_index() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let body = r#"{"title":"War and Peace", "author":"Tolstói", "genre": "Romance"}"#;
+    let body1 = r#"{"title":"War and Peace", "author":"Tolstói", "genre": "Romance"}"#;
+    let body2 = r#"{"title":"Moby Dick", "author":"Herman Melville", "genre": "Romance"}"#;
 
     client
         .post(format!("http://{}/books/create", app.address))
         .header("Content-Type", "application/json")
-        .body(body)
+        .body(body1)
+        .send()
+        .await
+        .expect("Failed to execute request.");
+
+    client
+        .post(format!("http://{}/books/create", app.address))
+        .header("Content-Type", "application/json")
+        .body(body2)
         .send()
         .await
         .expect("Failed to execute request.");
@@ -111,7 +120,8 @@ async fn books_index() {
         .expect("Failed to execute request.");
 
     let expected_result =
-        "[{\"title\":\"War and Peace\",\"author\":\"Tolstói\",\"genre\":\"Romance\"}]";
+        "[{\"title\":\"War and Peace\",\"author\":\"Tolstói\",\"genre\":\"Romance\"},\
+{\"title\":\"Moby Dick\",\"author\":\"Herman Melville\",\"genre\":\"Romance\"}]";
 
     assert!(response.status().is_success());
     assert_eq!(
