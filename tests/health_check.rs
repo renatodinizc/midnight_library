@@ -5,7 +5,6 @@ use uuid::Uuid;
 
 struct TestApp {
     address: String,
-    db_pool: PgPool,
     db_name: String,
     db_url: String,
 }
@@ -24,7 +23,6 @@ async fn spawn_app() -> TestApp {
 
     TestApp {
         address,
-        db_pool,
         db_name,
         db_url,
     }
