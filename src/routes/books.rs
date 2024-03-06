@@ -15,13 +15,11 @@ pub async fn books() -> HttpResponse {
 }
 
 pub async fn create_book(input: web::Json<BookData>, db_pool: web::Data<PgPool>) -> HttpResponse {
-    let uuid = Uuid::new_v4();
     match sqlx::query!(
         r#"
-        INSERT INTO books (id, title, author, genre, created_at)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO books (title, author, genre, created_at)
+        VALUES ($1, $2, $3, $4)
         "#,
-        uuid,
         input.title,
         input.author,
         input.genre,
@@ -32,8 +30,8 @@ pub async fn create_book(input: web::Json<BookData>, db_pool: web::Data<PgPool>)
     {
         Ok(_) => {
             println!(
-                "Book created! Details: title: {}, author: {}, genre: {}, book Uuid: {}",
-                input.title, input.author, input.genre, uuid
+                "Book created! Details: title: {}, author: {}, genre: {}",
+                input.title, input.author, input.genre
             );
             HttpResponse::Ok().finish()
         }

@@ -1,5 +1,5 @@
 CREATE TABLE books(
-  id uuid NOT NULL,
+  id uuid DEFAULT gen_random_uuid() NOT NULL,
   PRIMARY KEY (id),
   title TEXT NOT NULL,
   author TEXT NOT NULL,
