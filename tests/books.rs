@@ -107,8 +107,50 @@ async fn book_creation_with_incomplete_data() {
         .await
         .expect("Failed to execute request.");
 
-    assert!(response.status().is_client_error());
+    let record = sqlx::query!("SELECT * FROM books")
+        .fetch_optional(&app.db_pool)
+        .await
+        .expect("Failed to fetch saved subscription.");
 
+    assert!(response.status().is_client_error());
+    assert!(
+        record.is_none(),
+        "Record creation wasn't prevented successfully."
+    );
+
+    drop_db(app.db_name, app.db_pool).await;
+}
+
+#[tokio::test]
+async fn book_deletion() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let body = r#"{"title":"Harry Potter and the philosopher's stone", "author":"JK Rowling", "genre": "Fiction"}"#;
+    let deletion_body =
+        r#"{"title":"Harry Potter and the philosopher's stone", "author":"JK Rowling"}"#;
+
+    client
+        .post(format!("http://{}/books/create", app.address))
+        .header("Content-Type", "application/json")
+        .body(body)
+        .send()
+        .await
+        .expect("Failed to execute request.");
+
+    client
+        .post(format!("http://{}/books/delete", app.address))
+        .header("Content-Type", "application/json")
+        .body(deletion_body)
+        .send()
+        .await
+        .expect("Failed to execute request.");
+
+    let record = sqlx::query!("SELECT * FROM books")
+        .fetch_optional(&app.db_pool)
+        .await
+        .expect("Failed to fetch saved subscription.");
+
+    assert!(record.is_none(), "Record was not deleted successfully.");
     drop_db(app.db_name, app.db_pool).await;
 }
 
