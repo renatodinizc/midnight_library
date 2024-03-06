@@ -7,7 +7,7 @@ use uuid::Uuid;
 pub struct BookData {
     title: String,
     author: String,
-    genre: Option<String>,
+    genre: String,
 }
 
 pub async fn books() -> HttpResponse {
@@ -15,26 +15,28 @@ pub async fn books() -> HttpResponse {
 }
 
 pub async fn create_book(input: web::Json<BookData>, db_pool: web::Data<PgPool>) -> HttpResponse {
-    let genre = match input.genre.clone() {
-        Some(value) => value,
-        None => "No genre".to_string(),
-    };
-
+    let uuid = Uuid::new_v4();
     match sqlx::query!(
         r#"
         INSERT INTO books (id, title, author, genre, created_at)
         VALUES ($1, $2, $3, $4, $5)
         "#,
-        Uuid::new_v4(),
+        uuid,
         input.title,
         input.author,
-        genre,
+        input.genre,
         Utc::now()
     )
     .execute(db_pool.get_ref())
     .await
     {
-        Ok(_) => HttpResponse::Ok().finish(),
+        Ok(_) => {
+            println!(
+                "Book created! Details: title: {}, author: {}, genre: {}, book Uuid: {}",
+                input.title, input.author, input.genre, uuid
+            );
+            HttpResponse::Ok().finish()
+        }
         Err(e) => {
             eprintln!("Failed to execute query: {}", e);
             HttpResponse::InternalServerError().finish()
@@ -42,19 +44,29 @@ pub async fn create_book(input: web::Json<BookData>, db_pool: web::Data<PgPool>)
     }
 }
 
-pub async fn delete_book(input: web::Json<BookData>, db_pool: web::Data<PgPool>) -> HttpResponse {
+#[derive(serde::Deserialize)]
+pub struct BookDeletionData {
+    id: String,
+}
+
+pub async fn delete_book(
+    input: web::Json<BookDeletionData>,
+    db_pool: web::Data<PgPool>,
+) -> HttpResponse {
     match sqlx::query!(
         r#"
         DELETE FROM books
-        WHERE title = $1 AND author = $2;
+        WHERE id = $1;
         "#,
-        input.title,
-        input.author,
+        Uuid::parse_str(&input.id).unwrap_or_default(),
     )
     .execute(db_pool.get_ref())
     .await
     {
-        Ok(_) => HttpResponse::Ok().finish(),
+        Ok(_) => {
+            println!("Book deleted!book Uuid: {}", input.id);
+            HttpResponse::Ok().finish()
+        }
         Err(e) => {
             eprintln!("Failed to execute query: {}", e);
             HttpResponse::InternalServerError().finish()

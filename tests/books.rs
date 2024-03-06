@@ -68,7 +68,7 @@ async fn drop_db(name: Uuid, db_pool: PgPool) {
 async fn book_creation() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let body = r#"{"title":"Harry Potter and the philosopher's stone", "author":"JK Rowling", "genre": "Fiction"}"#;
+    let body = r#"{"title":"Harry Potter and the Prisoner of Azkaban", "author":"JK Rowling", "genre": "Fiction"}"#;
 
     let response = client
         .post(format!("http://{}/books/create", app.address))
@@ -86,7 +86,7 @@ async fn book_creation() {
         .await
         .expect("Failed to fetch saved subscription.");
 
-    assert_eq!(record.title, "Harry Potter and the philosopher's stone");
+    assert_eq!(record.title, "Harry Potter and the Prisoner of Azkaban");
     assert_eq!(record.author, "JK Rowling");
     assert_eq!(record.genre, "Fiction");
 
@@ -97,7 +97,7 @@ async fn book_creation() {
 async fn book_creation_with_incomplete_data() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let body = r#"{"title":"Harry Potter and the philosopher's stone"}"#;
+    let body = r#"{"title":"Harry Potter and the Prisoner of Azkaban"}"#;
 
     let response = client
         .post(format!("http://{}/books/create", app.address))
@@ -125,9 +125,7 @@ async fn book_creation_with_incomplete_data() {
 async fn book_deletion() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let body = r#"{"title":"Harry Potter and the philosopher's stone", "author":"JK Rowling", "genre": "Fiction"}"#;
-    let deletion_body =
-        r#"{"title":"Harry Potter and the philosopher's stone", "author":"JK Rowling"}"#;
+    let body = r#"{"title":"Harry Potter and the Prisoner of Azkaban", "author":"JK Rowling", "genre": "Fiction"}"#;
 
     client
         .post(format!("http://{}/books/create", app.address))
@@ -137,10 +135,15 @@ async fn book_deletion() {
         .await
         .expect("Failed to execute request.");
 
+    let created_record = sqlx::query!("SELECT * FROM books")
+        .fetch_one(&app.db_pool)
+        .await
+        .expect("Failed to fetch saved subscription.");
+
     client
         .post(format!("http://{}/books/delete", app.address))
         .header("Content-Type", "application/json")
-        .body(deletion_body)
+        .body(format!(r#"{{"id": "{}"}}"#, created_record.id))
         .send()
         .await
         .expect("Failed to execute request.");
