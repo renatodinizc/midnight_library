@@ -91,6 +91,41 @@ async fn drop_db(name: String, db_url: String) {
 }
 
 #[tokio::test]
+async fn books_index() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let body = r#"{"title":"War and Peace", "author":"Tolstói", "genre": "Romance"}"#;
+
+    client
+        .post(format!("http://{}/books/create", app.address))
+        .header("Content-Type", "application/json")
+        .body(body)
+        .send()
+        .await
+        .expect("Failed to execute request.");
+
+    let response = client
+        .get(format!("http://{}/books", app.address))
+        .send()
+        .await
+        .expect("Failed to execute request.");
+
+    let expected_result =
+        "[{\"title\":\"War and Peace\",\"author\":\"Tolstói\",\"genre\":\"Romance\"}]";
+
+    assert!(response.status().is_success());
+    assert_eq!(
+        expected_result,
+        response
+            .text_with_charset("utf-8")
+            .await
+            .expect("could not parse")
+    );
+
+    drop_db(app.db_name, app.db_url).await;
+}
+
+#[tokio::test]
 async fn book_creation() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
@@ -105,12 +140,18 @@ async fn book_creation() {
         .expect("Failed to execute request.");
 
     assert!(response.status().is_success());
-    assert_eq!(Some(0), response.content_length());
+    assert_eq!(
+        "Book created successfully!\n",
+        response
+            .text_with_charset("utf-8")
+            .await
+            .expect("could not parse")
+    );
 
     let record = sqlx::query!("SELECT * FROM books")
         .fetch_one(&app.db_pool)
         .await
-        .expect("Failed to fetch saved subscription.");
+        .expect("Failed to fetch saved book.");
 
     assert_eq!(record.title, "Harry Potter and the Prisoner of Azkaban");
     assert_eq!(record.author, "JK Rowling");
@@ -136,7 +177,7 @@ async fn book_creation_with_incomplete_data() {
     let record = sqlx::query!("SELECT * FROM books")
         .fetch_optional(&app.db_pool)
         .await
-        .expect("Failed to fetch saved subscription.");
+        .expect("Failed to fetch saved book.");
 
     assert!(response.status().is_client_error());
 
@@ -166,7 +207,7 @@ async fn book_deletion() {
     let created_record = sqlx::query!("SELECT * FROM books")
         .fetch_one(&app.db_pool)
         .await
-        .expect("Failed to fetch saved subscription.");
+        .expect("Failed to fetch saved book.");
 
     client
         .post(format!("http://{}/books/delete", app.address))
@@ -179,25 +220,8 @@ async fn book_deletion() {
     let record = sqlx::query!("SELECT * FROM books")
         .fetch_optional(&app.db_pool)
         .await
-        .expect("Failed to fetch saved subscription.");
+        .expect("Failed to fetch saved book.");
 
     assert!(record.is_none(), "Record was not deleted successfully.");
-    drop_db(app.db_name, app.db_url).await;
-}
-
-#[tokio::test]
-async fn books_index() {
-    let app = spawn_app().await;
-    let client = reqwest::Client::new();
-
-    let response = client
-        .get(format!("http://{}/books", app.address))
-        .send()
-        .await
-        .expect("Failed to execute request.");
-
-    assert!(response.status().is_success());
-    assert_eq!(Some(0), response.content_length());
-
     drop_db(app.db_name, app.db_url).await;
 }
