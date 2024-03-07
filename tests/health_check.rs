@@ -30,7 +30,6 @@ async fn spawn_app() -> TestApp {
 
 async fn setup_db() -> (PgPool, String, String) {
     let config = configuration::get_configuration().expect("Failed to read configuration.");
-
     let db_url = format!(
         "postgres://{}:{}@{}:{}",
         config.database.username,
@@ -38,10 +37,8 @@ async fn setup_db() -> (PgPool, String, String) {
         config.database.host,
         config.database.port,
     );
-
     let test_db_name = Uuid::new_v4().to_string();
-
-    let test_db_url = db_url.clone() + "/" + &test_db_name;
+    let test_db_url = format!("{}/{}", db_url, test_db_name);
 
     let mut db_connection = PgConnection::connect(&db_url)
         .await
