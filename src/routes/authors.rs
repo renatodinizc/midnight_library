@@ -5,30 +5,28 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize)]
-pub struct Book {
-    title: String,
-    author: String,
-    genre: String,
+pub struct Author {
+    name: String,
+    nationality: String,
 }
 
-pub async fn books_index(db_pool: web::Data<PgPool>) -> HttpResponse {
-    let books = sqlx::query_as!(Book, r#"SELECT title, author, genre FROM books"#)
+pub async fn authors_index(db_pool: web::Data<PgPool>) -> HttpResponse {
+    let authors = sqlx::query_as!(Author, r#"SELECT name, nationality FROM authors"#)
         .fetch_all(db_pool.get_ref())
         .await
-        .expect("Failed to fetch saved books.");
+        .expect("Failed to fetch saved authors.");
 
-    HttpResponse::Ok().json(books)
+    HttpResponse::Ok().json(authors)
 }
 
-pub async fn create_book(input: web::Json<Book>, db_pool: web::Data<PgPool>) -> HttpResponse {
+pub async fn create_author(input: web::Json<Author>, db_pool: web::Data<PgPool>) -> HttpResponse {
     match sqlx::query!(
         r#"
-        INSERT INTO books (title, author, genre, created_at)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO authors (name, nationality, created_at)
+        VALUES ($1, $2, $3)
         "#,
-        input.title,
-        input.author,
-        input.genre,
+        input.name,
+        input.nationality,
         Utc::now()
     )
     .execute(db_pool.get_ref())
@@ -36,20 +34,20 @@ pub async fn create_book(input: web::Json<Book>, db_pool: web::Data<PgPool>) -> 
     {
         Ok(_) => HttpResponse::Ok()
             .content_type(ContentType::plaintext())
-            .body("Book created successfully!\n"),
+            .body("Author created successfully!\n"),
         Err(_e) => HttpResponse::InternalServerError().finish(),
     }
 }
 
 #[derive(Deserialize)]
-pub struct BookId {
+pub struct AuthorId {
     id: String,
 }
 
-pub async fn delete_book(input: web::Json<BookId>, db_pool: web::Data<PgPool>) -> HttpResponse {
+pub async fn delete_author(input: web::Json<AuthorId>, db_pool: web::Data<PgPool>) -> HttpResponse {
     match sqlx::query!(
         r#"
-        DELETE FROM books
+        DELETE FROM authors
         WHERE id = $1;
         "#,
         Uuid::parse_str(&input.id).unwrap_or_default(),
@@ -59,7 +57,7 @@ pub async fn delete_book(input: web::Json<BookId>, db_pool: web::Data<PgPool>) -
     {
         Ok(_) => HttpResponse::Ok()
             .content_type(ContentType::plaintext())
-            .body("Author deleted successfully!\n"),
+            .body("Author created successfully!\n"),
         Err(_e) => HttpResponse::InternalServerError().finish(),
     }
 }

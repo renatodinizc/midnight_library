@@ -91,14 +91,14 @@ async fn drop_db(name: String, db_url: String) {
 }
 
 #[tokio::test]
-async fn books_index() {
+async fn authors_index() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let body1 = r#"{"title":"War and Peace", "author":"Tolstói", "genre": "Romance"}"#;
-    let body2 = r#"{"title":"Moby Dick", "author":"Herman Melville", "genre": "Romance"}"#;
+    let body1 = r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#;
+    let body2 = r#"{"name":"Herman Melville", "nationality":"American"}"#;
 
     client
-        .post(format!("http://{}/books/create", app.address))
+        .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
         .body(body1)
         .send()
@@ -106,7 +106,7 @@ async fn books_index() {
         .expect("Failed to execute request.");
 
     client
-        .post(format!("http://{}/books/create", app.address))
+        .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
         .body(body2)
         .send()
@@ -114,14 +114,13 @@ async fn books_index() {
         .expect("Failed to execute request.");
 
     let response = client
-        .get(format!("http://{}/books", app.address))
+        .get(format!("http://{}/authors", app.address))
         .send()
         .await
         .expect("Failed to execute request.");
 
-    let expected_result =
-        "[{\"title\":\"War and Peace\",\"author\":\"Tolstói\",\"genre\":\"Romance\"},\
-{\"title\":\"Moby Dick\",\"author\":\"Herman Melville\",\"genre\":\"Romance\"}]";
+    let expected_result = "[{\"name\":\"JRR Tolkien\",\"nationality\":\"Britain\"},\
+{\"name\":\"Herman Melville\",\"nationality\":\"American\"}]";
 
     assert!(response.status().is_success());
     assert_eq!(
@@ -136,13 +135,13 @@ async fn books_index() {
 }
 
 #[tokio::test]
-async fn book_creation() {
+async fn author_creation() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let body = r#"{"title":"Harry Potter and the Prisoner of Azkaban", "author":"JK Rowling", "genre": "Fiction"}"#;
+    let body = r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#;
 
     let response = client
-        .post(format!("http://{}/books/create", app.address))
+        .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
         .body(body)
         .send()
@@ -151,43 +150,42 @@ async fn book_creation() {
 
     assert!(response.status().is_success());
     assert_eq!(
-        "Book created successfully!\n",
+        "Author created successfully!\n",
         response
             .text_with_charset("utf-8")
             .await
             .expect("could not parse")
     );
 
-    let record = sqlx::query!("SELECT * FROM books")
+    let record = sqlx::query!("SELECT * FROM authors")
         .fetch_one(&app.db_pool)
         .await
-        .expect("Failed to fetch saved book.");
+        .expect("Failed to fetch saved author.");
 
-    assert_eq!(record.title, "Harry Potter and the Prisoner of Azkaban");
-    assert_eq!(record.author, "JK Rowling");
-    assert_eq!(record.genre, "Fiction");
+    assert_eq!(record.name, "JRR Tolkien");
+    assert_eq!(record.nationality, "Britain");
 
     drop_db(app.db_name, app.db_url).await;
 }
 
 #[tokio::test]
-async fn book_creation_with_incomplete_data() {
+async fn author_creation_with_incomplete_data() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let body = r#"{"title":"HOT POTATO"}"#;
+    let body = r#"{"name":"JRR Tolkien"}"#;
 
     let response = client
-        .post(format!("http://{}/books/create", app.address))
+        .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
         .body(body)
         .send()
         .await
         .expect("Failed to execute request.");
 
-    let record = sqlx::query!("SELECT * FROM books")
+    let record = sqlx::query!("SELECT * FROM authors")
         .fetch_optional(&app.db_pool)
         .await
-        .expect("Failed to fetch saved book.");
+        .expect("Failed to fetch saved author.");
 
     assert!(response.status().is_client_error());
 
@@ -200,36 +198,36 @@ async fn book_creation_with_incomplete_data() {
 }
 
 #[tokio::test]
-async fn book_deletion() {
+async fn author_deletion() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let body = r#"{"title":"Harry Potter and the Prisoner of Azkaban", "author":"JK Rowling", "genre": "Fiction"}"#;
+    let body = r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#;
 
     client
-        .post(format!("http://{}/books/create", app.address))
+        .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
         .body(body)
         .send()
         .await
         .expect("Failed to execute request.");
 
-    let created_record = sqlx::query!("SELECT * FROM books")
+    let created_record = sqlx::query!("SELECT * FROM authors")
         .fetch_one(&app.db_pool)
         .await
-        .expect("Failed to fetch saved book.");
+        .expect("Failed to fetch saved author.");
 
     client
-        .post(format!("http://{}/books/delete", app.address))
+        .post(format!("http://{}/authors/delete", app.address))
         .header("Content-Type", "application/json")
         .body(format!(r#"{{"id": "{}"}}"#, created_record.id))
         .send()
         .await
         .expect("Failed to execute request.");
 
-    let record = sqlx::query!("SELECT * FROM books")
+    let record = sqlx::query!("SELECT * FROM authors")
         .fetch_optional(&app.db_pool)
         .await
-        .expect("Failed to fetch saved book.");
+        .expect("Failed to fetch saved author.");
 
     assert!(record.is_none(), "Record was not deleted successfully.");
     drop_db(app.db_name, app.db_url).await;
