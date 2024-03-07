@@ -1,5 +1,6 @@
 #[derive(serde::Deserialize)]
 pub struct ApplicationConfigs {
+    pub server_address: String,
     pub database: DatabaseConfig,
 }
 
