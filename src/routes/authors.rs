@@ -1,23 +1,41 @@
 use actix_web::{http::header::ContentType, web, HttpResponse};
 use chrono::Utc;
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::super::models::{Author, AuthorId};
-
 pub async fn authors_index(db_pool: web::Data<PgPool>) -> HttpResponse {
-    let authors = sqlx::query_as!(
-        Author,
-        r#"SELECT id, name, nationality, created_at FROM authors"#
-    )
-    .fetch_all(db_pool.get_ref())
-    .await
-    .expect("Failed to fetch saved authors.");
+    let rows = sqlx::query!(r#"SELECT id, name, nationality, created_at FROM authors"#)
+        .fetch_all(db_pool.get_ref())
+        .await
+        .expect("Failed to fetch saved authors.");
+
+    let authors: Vec<serde_json::Value> = rows
+        .into_iter()
+        .map(|row| {
+            json!({
+                "id": row.id,
+                "name": row.name,
+                "nationality": row.nationality,
+                "created_at": row.created_at
+            })
+        })
+        .collect();
 
     HttpResponse::Ok().json(authors)
 }
 
-pub async fn create_author(input: web::Json<Author>, db_pool: web::Data<PgPool>) -> HttpResponse {
+#[derive(Serialize, Deserialize)]
+pub struct CreateAuthorData {
+    name: String,
+    nationality: String,
+}
+
+pub async fn create_author(
+    input: web::Json<CreateAuthorData>,
+    db_pool: web::Data<PgPool>,
+) -> HttpResponse {
     match sqlx::query!(
         r#"
         INSERT INTO authors (name, nationality, created_at)
@@ -35,6 +53,11 @@ pub async fn create_author(input: web::Json<Author>, db_pool: web::Data<PgPool>)
             .body("Author created successfully!\n"),
         Err(_e) => HttpResponse::InternalServerError().body("Couldn't create specified author.\n"),
     }
+}
+
+#[derive(Deserialize)]
+pub struct AuthorId {
+    id: String,
 }
 
 pub async fn delete_author(input: web::Json<AuthorId>, db_pool: web::Data<PgPool>) -> HttpResponse {

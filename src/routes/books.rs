@@ -1,29 +1,55 @@
 use actix_web::{http::header::ContentType, web, HttpResponse};
 use chrono::Utc;
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::super::models::Author;
-use super::super::models::{Book, BookId, CreateBookData};
-
 pub async fn books_index(db_pool: web::Data<PgPool>) -> HttpResponse {
-    let books = sqlx::query_as!(
-        Book,
-        r#"SELECT id, title, author_id, genre, created_at FROM books"#
+    let rows = sqlx::query!(
+        r#"
+        SELECT
+            books.id,
+            books.title,
+            authors.name AS "authors_name",
+            books.genre,
+            books.created_at
+        FROM books
+        JOIN authors ON books.author_id = authors.id
+        "#
     )
     .fetch_all(db_pool.get_ref())
     .await
     .expect("Failed to fetch saved books.");
 
+    let books: Vec<serde_json::Value> = rows
+        .into_iter()
+        .map(|row| {
+            json!({
+                "id": row.id,
+                "title": row.title,
+                "author": row.authors_name,
+                "genre": row.genre,
+                "created_at": row.created_at
+            })
+        })
+        .collect();
+
     HttpResponse::Ok().json(books)
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct CreateBookData {
+    title: String,
+    author: String,
+    genre: String,
 }
 
 pub async fn create_book(
     input: web::Json<CreateBookData>,
     db_pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    let author = match sqlx::query_as!(
-        Author,
+    let author = match sqlx::query!(
         r#"SELECT id, name, nationality, created_at FROM authors WHERE name = $1"#,
         input.author
     )
@@ -54,6 +80,11 @@ pub async fn create_book(
             .body("Book created successfully!\n"),
         Err(_e) => HttpResponse::InternalServerError().body("Couldn't create specified book.\n"),
     }
+}
+
+#[derive(Deserialize)]
+pub struct BookId {
+    id: String,
 }
 
 pub async fn delete_book(input: web::Json<BookId>, db_pool: web::Data<PgPool>) -> HttpResponse {
