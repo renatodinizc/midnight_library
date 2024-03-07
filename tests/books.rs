@@ -94,13 +94,10 @@ async fn drop_db(name: String, db_url: String) {
 async fn books_index() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let body1 = r#"{"title":"War and Peace", "author":"Tolstói", "genre": "Romance"}"#;
-    let body2 = r#"{"title":"Moby Dick", "author":"Herman Melville", "genre": "Romance"}"#;
-
     client
-        .post(format!("http://{}/books/create", app.address))
+        .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
-        .body(body1)
+        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
         .send()
         .await
         .expect("Failed to execute request.");
@@ -108,7 +105,15 @@ async fn books_index() {
     client
         .post(format!("http://{}/books/create", app.address))
         .header("Content-Type", "application/json")
-        .body(body2)
+        .body(r#"{"title":"Lord of the rings", "author":"JRR Tolkien", "genre": "Fiction"}"#)
+        .send()
+        .await
+        .expect("Failed to execute request.");
+
+    client
+        .post(format!("http://{}/books/create", app.address))
+        .header("Content-Type", "application/json")
+        .body(r#"{"title":"The Hobbit", "author":"JRR Tolkien", "genre": "Fiction"}"#)
         .send()
         .await
         .expect("Failed to execute request.");
@@ -119,18 +124,17 @@ async fn books_index() {
         .await
         .expect("Failed to execute request.");
 
-    let expected_result =
-        "[{\"title\":\"War and Peace\",\"author\":\"Tolstói\",\"genre\":\"Romance\"},\
-{\"title\":\"Moby Dick\",\"author\":\"Herman Melville\",\"genre\":\"Romance\"}]";
-
     assert!(response.status().is_success());
-    assert_eq!(
-        expected_result,
-        response
-            .text_with_charset("utf-8")
-            .await
-            .expect("could not parse")
-    );
+
+    let parsed_response = &response
+        .text_with_charset("utf-8")
+        .await
+        .expect("could not parse");
+
+    assert!(parsed_response.contains(r#""title":"Lord of the rings""#));
+    assert!(parsed_response.contains(r#""title":"The Hobbit""#));
+    assert!(parsed_response.contains(r#""author":"JRR Tolkien""#));
+    assert!(parsed_response.contains(r#""genre":"Fiction""#));
 
     drop_db(app.db_name, app.db_url).await;
 }
@@ -139,7 +143,14 @@ async fn books_index() {
 async fn book_creation() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let body = r#"{"title":"Harry Potter and the Prisoner of Azkaban", "author":"JK Rowling", "genre": "Fiction"}"#;
+    client
+        .post(format!("http://{}/authors/create", app.address))
+        .header("Content-Type", "application/json")
+        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
+        .send()
+        .await
+        .expect("Failed to execute request.");
+    let body = r#"{"title":"Lord of the Rings", "author":"JRR Tolkien", "genre": "Fiction"}"#;
 
     let response = client
         .post(format!("http://{}/books/create", app.address))
@@ -158,13 +169,19 @@ async fn book_creation() {
             .expect("could not parse")
     );
 
-    let record = sqlx::query!("SELECT * FROM books")
-        .fetch_one(&app.db_pool)
-        .await
-        .expect("Failed to fetch saved book.");
+    let record = sqlx::query!(
+        r#"SELECT  books.id,
+            books.title,
+            authors.name AS "authors_name",
+            books.genre,
+            books.created_at  FROM books JOIN authors ON books.author_id = authors.id"#
+    )
+    .fetch_one(&app.db_pool)
+    .await
+    .expect("Failed to fetch saved book.");
 
-    assert_eq!(record.title, "Harry Potter and the Prisoner of Azkaban");
-    assert_eq!(record.author, "JK Rowling");
+    assert_eq!(record.title, "Lord of the Rings");
+    assert_eq!(record.authors_name, "JRR Tolkien");
     assert_eq!(record.genre, "Fiction");
 
     drop_db(app.db_name, app.db_url).await;
@@ -174,7 +191,14 @@ async fn book_creation() {
 async fn book_creation_with_incomplete_data() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let body = r#"{"title":"HOT POTATO"}"#;
+    client
+        .post(format!("http://{}/authors/create", app.address))
+        .header("Content-Type", "application/json")
+        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
+        .send()
+        .await
+        .expect("Failed to execute request.");
+    let body = r#"{"title":"Lord of the Rings", "author":"JRR Tolkien"}"#;
 
     let response = client
         .post(format!("http://{}/books/create", app.address))
@@ -184,13 +208,12 @@ async fn book_creation_with_incomplete_data() {
         .await
         .expect("Failed to execute request.");
 
+    assert!(response.status().is_client_error());
+
     let record = sqlx::query!("SELECT * FROM books")
         .fetch_optional(&app.db_pool)
         .await
         .expect("Failed to fetch saved book.");
-
-    assert!(response.status().is_client_error());
-
     assert!(
         record.is_none(),
         "Record creation wasn't prevented successfully."
@@ -203,12 +226,18 @@ async fn book_creation_with_incomplete_data() {
 async fn book_deletion() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let body = r#"{"title":"Harry Potter and the Prisoner of Azkaban", "author":"JK Rowling", "genre": "Fiction"}"#;
+    client
+        .post(format!("http://{}/authors/create", app.address))
+        .header("Content-Type", "application/json")
+        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
+        .send()
+        .await
+        .expect("Failed to execute request.");
 
     client
         .post(format!("http://{}/books/create", app.address))
         .header("Content-Type", "application/json")
-        .body(body)
+        .body(r#"{"title":"Lord of the Rings", "author":"JRR Tolkien", "genre": "Fiction"}"#)
         .send()
         .await
         .expect("Failed to execute request.");

@@ -94,21 +94,17 @@ async fn drop_db(name: String, db_url: String) {
 async fn authors_index() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let body1 = r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#;
-    let body2 = r#"{"name":"Herman Melville", "nationality":"American"}"#;
-
     client
         .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
-        .body(body1)
+        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
         .send()
         .await
         .expect("Failed to execute request.");
-
     client
         .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
-        .body(body2)
+        .body(r#"{"name":"Herman Melville", "nationality":"American"}"#)
         .send()
         .await
         .expect("Failed to execute request.");
@@ -119,17 +115,16 @@ async fn authors_index() {
         .await
         .expect("Failed to execute request.");
 
-    let expected_result = "[{\"name\":\"JRR Tolkien\",\"nationality\":\"Britain\"},\
-{\"name\":\"Herman Melville\",\"nationality\":\"American\"}]";
-
     assert!(response.status().is_success());
-    assert_eq!(
-        expected_result,
-        response
-            .text_with_charset("utf-8")
-            .await
-            .expect("could not parse")
-    );
+    let parsed_response = &response
+        .text_with_charset("utf-8")
+        .await
+        .expect("could not parse");
+
+    assert!(parsed_response.contains(r#""name":"JRR Tolkien""#));
+    assert!(parsed_response.contains(r#""nationality":"Britain""#));
+    assert!(parsed_response.contains(r#""name":"Herman Melville""#));
+    assert!(parsed_response.contains(r#""nationality":"American""#));
 
     drop_db(app.db_name, app.db_url).await;
 }
