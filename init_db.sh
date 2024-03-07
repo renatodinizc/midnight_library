@@ -34,7 +34,7 @@ if ! docker ps --filter "publish=${DB_PORT}" --format "{{.Ports}}" | grep -q "${
     -e POSTGRES_PASSWORD=${DB_PASSWORD} \
     -e POSTGRES_DB=${DB_NAME} \
     -p "${DB_PORT}":5432 \
-    --name bookstore_api_db \
+    --name bookstore_db \
     -d postgres \
     postgres -N 1000 # Increased maximum number of connections for testing purposes
 else
