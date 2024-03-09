@@ -56,7 +56,7 @@ pub async fn create_author(input: Json<NewAuthorData>, db_pool: Data<PgPool>) ->
         Ok(_) => HttpResponse::Ok()
             .content_type(ContentType::plaintext())
             .body("Author created successfully!\n"),
-        Err(_e) => HttpResponse::InternalServerError().body("Couldn't create specified author.\n"),
+        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
 }
 
@@ -73,9 +73,14 @@ pub async fn delete_author(input: Json<AuthorId>, db_pool: Data<PgPool>) -> Http
     .execute(db_pool.get_ref())
     .await
     {
-        Ok(_) => HttpResponse::Ok()
-            .content_type(ContentType::plaintext())
-            .body("Author deleted successfully!\n"),
-        Err(_e) => HttpResponse::InternalServerError().finish(),
+        Ok(result) => match result.rows_affected() == 1 {
+            true => HttpResponse::Ok()
+                .content_type(ContentType::plaintext())
+                .body("Author deleted successfully!\n"),
+            false => HttpResponse::NotFound()
+                .content_type(ContentType::plaintext())
+                .body("Author to be deleted not found!\n"),
+        },
+        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
 }

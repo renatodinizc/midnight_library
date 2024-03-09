@@ -65,9 +65,7 @@ pub async fn create_book(input: Json<NewBookData>, db_pool: Data<PgPool>) -> Htt
     .await
     {
         Ok(author) => author,
-        Err(_e) => {
-            return HttpResponse::BadRequest().body("Couldn't find specified author of the book.\n")
-        }
+        Err(e) => return HttpResponse::BadRequest().body(e.to_string()),
     };
 
     match sqlx::query!(
@@ -83,7 +81,7 @@ pub async fn create_book(input: Json<NewBookData>, db_pool: Data<PgPool>) -> Htt
         Ok(_) => HttpResponse::Ok()
             .content_type(ContentType::plaintext())
             .body("Book created successfully!\n"),
-        Err(_e) => HttpResponse::InternalServerError().body("Couldn't create specified book.\n"),
+        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
 }
 
@@ -100,11 +98,14 @@ pub async fn delete_book(input: Json<BookId>, db_pool: Data<PgPool>) -> HttpResp
     .execute(db_pool.get_ref())
     .await
     {
-        Ok(_) => HttpResponse::Ok()
-            .content_type(ContentType::plaintext())
-            .body("Book deleted successfully!\n"),
-        Err(_e) => {
-            HttpResponse::InternalServerError().body("Couldn't find specified book to delete.\n")
-        }
+        Ok(result) => match result.rows_affected() == 1 {
+            true => HttpResponse::Ok()
+                .content_type(ContentType::plaintext())
+                .body("Book deleted successfully!\n"),
+            false => HttpResponse::NotFound()
+                .content_type(ContentType::plaintext())
+                .body("Book to be deleted not found!\n"),
+        },
+        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
 }
