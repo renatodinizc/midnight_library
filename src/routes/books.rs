@@ -58,7 +58,7 @@ pub async fn create_book(input: Json<NewBookData>, db_pool: Data<PgPool>) -> Htt
     };
 
     let author = match sqlx::query!(
-        r#"SELECT id, name, nationality, created_at FROM authors WHERE name = $1"#,
+        "SELECT id, name, nationality, created_at FROM authors WHERE name = $1",
         new_book.author.as_ref()
     )
     .fetch_one(db_pool.get_ref())
@@ -71,10 +71,7 @@ pub async fn create_book(input: Json<NewBookData>, db_pool: Data<PgPool>) -> Htt
     };
 
     match sqlx::query!(
-        r#"
-        INSERT INTO books (title, genre, author_id, created_at)
-        VALUES ($1, $2, $3, $4)
-        "#,
+        "INSERT INTO books (title, genre, author_id, created_at) VALUES ($1, $2, $3, $4)",
         new_book.title.as_ref(),
         new_book.genre.as_ref(),
         author.id,
@@ -97,10 +94,7 @@ pub struct BookId {
 
 pub async fn delete_book(input: Json<BookId>, db_pool: Data<PgPool>) -> HttpResponse {
     match sqlx::query!(
-        r#"
-        DELETE FROM books
-        WHERE id = $1;
-        "#,
+        "DELETE FROM books WHERE id = $1",
         Uuid::parse_str(&input.id).unwrap_or_default(),
     )
     .execute(db_pool.get_ref())

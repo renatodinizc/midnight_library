@@ -11,7 +11,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 pub async fn authors_index(db_pool: Data<PgPool>) -> HttpResponse {
-    let rows = sqlx::query!(r#"SELECT id, name, nationality, created_at FROM authors"#)
+    let rows = sqlx::query!("SELECT id, name, nationality, created_at FROM authors")
         .fetch_all(db_pool.get_ref())
         .await
         .expect("Failed to fetch saved authors.");
@@ -44,10 +44,8 @@ pub async fn create_author(input: Json<NewAuthorData>, db_pool: Data<PgPool>) ->
     };
 
     match sqlx::query!(
-        r#"
-        INSERT INTO authors (name, nationality, created_at)
-        VALUES ($1, $2, $3)
-        "#,
+        "INSERT INTO authors (name, nationality, created_at)
+        VALUES ($1, $2, $3)",
         new_author.name.as_ref(),
         new_author.nationality.as_ref(),
         Utc::now()
@@ -69,10 +67,7 @@ pub struct AuthorId {
 
 pub async fn delete_author(input: Json<AuthorId>, db_pool: Data<PgPool>) -> HttpResponse {
     match sqlx::query!(
-        r#"
-        DELETE FROM authors
-        WHERE id = $1;
-        "#,
+        "DELETE FROM authors WHERE id = $1",
         Uuid::parse_str(&input.id).unwrap_or_default(),
     )
     .execute(db_pool.get_ref())
@@ -80,7 +75,7 @@ pub async fn delete_author(input: Json<AuthorId>, db_pool: Data<PgPool>) -> Http
     {
         Ok(_) => HttpResponse::Ok()
             .content_type(ContentType::plaintext())
-            .body("Author created successfully!\n"),
+            .body("Author deleted successfully!\n"),
         Err(_e) => HttpResponse::InternalServerError().finish(),
     }
 }
