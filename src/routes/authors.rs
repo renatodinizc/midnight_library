@@ -1,11 +1,16 @@
-use actix_web::{http::header::ContentType, web, HttpResponse};
+use crate::validations::author::NewAuthor;
+use actix_web::{
+    http::header::ContentType,
+    web::{Data, Json},
+    HttpResponse,
+};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-pub async fn authors_index(db_pool: web::Data<PgPool>) -> HttpResponse {
+pub async fn authors_index(db_pool: Data<PgPool>) -> HttpResponse {
     let rows = sqlx::query!(r#"SELECT id, name, nationality, created_at FROM authors"#)
         .fetch_all(db_pool.get_ref())
         .await
@@ -27,22 +32,24 @@ pub async fn authors_index(db_pool: web::Data<PgPool>) -> HttpResponse {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct CreateAuthorData {
-    name: String,
-    nationality: String,
+pub struct NewAuthorData {
+    pub name: String,
+    pub nationality: String,
 }
 
-pub async fn create_author(
-    input: web::Json<CreateAuthorData>,
-    db_pool: web::Data<PgPool>,
-) -> HttpResponse {
+pub async fn create_author(input: Json<NewAuthorData>, db_pool: Data<PgPool>) -> HttpResponse {
+    let new_author: NewAuthor = match input.0.try_into() {
+        Ok(value) => value,
+        Err(error) => return HttpResponse::BadRequest().body(error),
+    };
+
     match sqlx::query!(
         r#"
         INSERT INTO authors (name, nationality, created_at)
         VALUES ($1, $2, $3)
         "#,
-        input.name,
-        input.nationality,
+        new_author.name.as_ref(),
+        new_author.nationality.as_ref(),
         Utc::now()
     )
     .execute(db_pool.get_ref())
@@ -60,7 +67,7 @@ pub struct AuthorId {
     id: String,
 }
 
-pub async fn delete_author(input: web::Json<AuthorId>, db_pool: web::Data<PgPool>) -> HttpResponse {
+pub async fn delete_author(input: Json<AuthorId>, db_pool: Data<PgPool>) -> HttpResponse {
     match sqlx::query!(
         r#"
         DELETE FROM authors

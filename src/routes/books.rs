@@ -1,11 +1,17 @@
-use actix_web::{http::header::ContentType, web, HttpResponse};
+use actix_web::{
+    http::header::ContentType,
+    web::{Data, Json},
+    HttpResponse,
+};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-pub async fn books_index(db_pool: web::Data<PgPool>) -> HttpResponse {
+use crate::validations::book::NewBook;
+
+pub async fn books_index(db_pool: Data<PgPool>) -> HttpResponse {
     let rows = sqlx::query!(
         r#"
         SELECT
@@ -38,20 +44,22 @@ pub async fn books_index(db_pool: web::Data<PgPool>) -> HttpResponse {
     HttpResponse::Ok().json(books)
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct CreateBookData {
-    title: String,
-    author: String,
-    genre: String,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NewBookData {
+    pub title: String,
+    pub author: String,
+    pub genre: String,
 }
 
-pub async fn create_book(
-    input: web::Json<CreateBookData>,
-    db_pool: web::Data<PgPool>,
-) -> HttpResponse {
+pub async fn create_book(input: Json<NewBookData>, db_pool: Data<PgPool>) -> HttpResponse {
+    let new_book: NewBook = match input.0.try_into() {
+        Ok(value) => value,
+        Err(e) => return HttpResponse::BadRequest().body(e),
+    };
+
     let author = match sqlx::query!(
         r#"SELECT id, name, nationality, created_at FROM authors WHERE name = $1"#,
-        input.author
+        new_book.author.as_ref()
     )
     .fetch_one(db_pool.get_ref())
     .await
@@ -67,8 +75,8 @@ pub async fn create_book(
         INSERT INTO books (title, genre, author_id, created_at)
         VALUES ($1, $2, $3, $4)
         "#,
-        input.title,
-        input.genre,
+        new_book.title.as_ref(),
+        new_book.genre.as_ref(),
         author.id,
         Utc::now()
     )
@@ -87,7 +95,7 @@ pub struct BookId {
     id: String,
 }
 
-pub async fn delete_book(input: web::Json<BookId>, db_pool: web::Data<PgPool>) -> HttpResponse {
+pub async fn delete_book(input: Json<BookId>, db_pool: Data<PgPool>) -> HttpResponse {
     match sqlx::query!(
         r#"
         DELETE FROM books
