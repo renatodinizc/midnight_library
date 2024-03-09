@@ -21,11 +21,8 @@ impl ValidatedAuthorName {
     pub fn new(value: String) -> Result<Self, String> {
         let is_empty_or_whitespace = value.trim().is_empty();
         let size_too_big = value.chars().count() > 256;
-        let contain_forbidden_chars = value
-            .chars()
-            .any(|c| ['/', '(', ')', '"', '<', '>', '\\', '{', '}'].contains(&c));
 
-        if is_empty_or_whitespace || size_too_big || contain_forbidden_chars {
+        if is_empty_or_whitespace || size_too_big {
             Err(format!("'{}' is not a valid author name.", value))
         } else {
             Ok(Self(value))
@@ -45,11 +42,8 @@ impl ValidatedAuthorNationality {
     fn new(value: String) -> Result<Self, String> {
         let is_empty_or_whitespace = value.trim().is_empty();
         let size_too_big = value.chars().count() > 80;
-        let contain_forbidden_chars = value
-            .chars()
-            .any(|c| ['/', '(', ')', '"', '<', '>', '\\', '{', '}'].contains(&c));
 
-        if is_empty_or_whitespace || size_too_big || contain_forbidden_chars {
+        if is_empty_or_whitespace || size_too_big {
             Err(format!("'{}' is not a valid author nationality.", value))
         } else {
             Ok(Self(value))
@@ -98,19 +92,6 @@ mod tests {
     }
 
     #[test]
-    fn name_with_forbidden_chars() {
-        let forbidden_chars = vec!['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
-        for &c in &forbidden_chars {
-            let name = format!("John{}Doe", c);
-            assert!(
-                ValidatedAuthorName::new(name).is_err(),
-                "Failed on character: {}",
-                c
-            );
-        }
-    }
-
-    #[test]
     fn valid_nationality() {
         let nationality = String::from("Brazilian");
         assert!(ValidatedAuthorNationality::new(nationality).is_ok());
@@ -138,19 +119,6 @@ mod tests {
     fn too_long_nationality() {
         let nationality = "a".repeat(81);
         assert!(ValidatedAuthorNationality::new(nationality).is_err());
-    }
-
-    #[test]
-    fn nationality_with_forbidden_chars() {
-        let forbidden_chars = vec!['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
-        for &c in &forbidden_chars {
-            let nationality = format!("Greek{}", c);
-            assert!(
-                ValidatedAuthorNationality::new(nationality).is_err(),
-                "Failed on character: {}",
-                c
-            );
-        }
     }
 
     #[test]

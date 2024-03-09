@@ -28,11 +28,8 @@ impl ValidatedBookTitle {
     pub fn new(title: String) -> Result<Self, String> {
         let is_empty_or_whitespace = title.trim().is_empty();
         let size_too_big = title.chars().count() > 256;
-        let contain_forbidden_chars = title
-            .chars()
-            .any(|c| ['/', '(', ')', '"', '<', '>', '\\', '{', '}'].contains(&c));
 
-        if is_empty_or_whitespace || size_too_big || contain_forbidden_chars {
+        if is_empty_or_whitespace || size_too_big {
             Err(format!("'{}' is not a valid author title.", title))
         } else {
             Ok(Self(title))
@@ -52,11 +49,8 @@ impl ValidatedBookGenre {
     fn new(genre: String) -> Result<Self, String> {
         let is_empty_or_whitespace = genre.trim().is_empty();
         let size_too_big = genre.chars().count() > 80;
-        let contain_forbidden_chars = genre
-            .chars()
-            .any(|c| ['/', '(', ')', '"', '<', '>', '\\', '{', '}'].contains(&c));
 
-        if is_empty_or_whitespace || size_too_big || contain_forbidden_chars {
+        if is_empty_or_whitespace || size_too_big {
             Err(format!("'{}' is not a valid author genre.", genre))
         } else {
             Ok(Self(genre))
@@ -105,19 +99,6 @@ mod tests {
     }
 
     #[test]
-    fn title_with_forbidden_chars() {
-        let forbidden_chars = vec!['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
-        for &c in &forbidden_chars {
-            let title = format!("John{}Doe", c);
-            assert!(
-                ValidatedBookTitle::new(title).is_err(),
-                "Failed on character: {}",
-                c
-            );
-        }
-    }
-
-    #[test]
     fn valid_genre() {
         let genre = String::from("Fiction");
         assert!(ValidatedBookGenre::new(genre).is_ok());
@@ -145,19 +126,6 @@ mod tests {
     fn too_long_genre() {
         let genre = "a".repeat(81);
         assert!(ValidatedBookGenre::new(genre).is_err());
-    }
-
-    #[test]
-    fn genre_with_forbidden_chars() {
-        let forbidden_chars = vec!['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
-        for &c in &forbidden_chars {
-            let genre = format!("Horror{}", c);
-            assert!(
-                ValidatedBookGenre::new(genre).is_err(),
-                "Failed on character: {}",
-                c
-            );
-        }
     }
 
     #[test]
