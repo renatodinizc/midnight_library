@@ -95,7 +95,7 @@ async fn authors_index() {
     client
         .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
-        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
+        .body(r#"{"name":"JRR Tolkien", "nationality":"British"}"#)
         .send()
         .await
         .expect("Failed to execute request.");
@@ -118,7 +118,7 @@ async fn authors_index() {
         .expect("Failed to deserialize response body.");
 
     assert_eq!(parsed_response[0]["name"], "JRR Tolkien");
-    assert_eq!(parsed_response[0]["nationality"], "Britain");
+    assert_eq!(parsed_response[0]["nationality"], "British");
     assert_eq!(parsed_response[1]["name"], "Herman Melville");
     assert_eq!(parsed_response[1]["nationality"], "American");
 
@@ -132,7 +132,7 @@ async fn show_author() {
     let create_response = client
         .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
-        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
+        .body(r#"{"name":"JRR Tolkien", "nationality":"British"}"#)
         .send()
         .await
         .expect("Failed to execute request.");
@@ -156,7 +156,7 @@ async fn show_author() {
         .expect("Failed to deserialize response body.");
 
     assert_eq!(response_body2["name"], "JRR Tolkien");
-    assert_eq!(response_body2["nationality"], "Britain");
+    assert_eq!(response_body2["nationality"], "British");
     assert_eq!(response_body2["id"], author_id);
 
     drop_db(app.db_name, app.db_url).await;
@@ -170,7 +170,7 @@ async fn author_creation() {
     let response = client
         .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
-        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
+        .body(r#"{"name":"JRR Tolkien", "nationality":"British"}"#)
         .send()
         .await
         .expect("Failed to execute request.");
@@ -182,7 +182,7 @@ async fn author_creation() {
 
     assert!(response.status().is_success());
     assert_eq!(record.name, "JRR Tolkien");
-    assert_eq!(record.nationality, "Britain");
+    assert_eq!(record.nationality, "British");
 
     drop_db(app.db_name, app.db_url).await;
 }
@@ -218,7 +218,7 @@ async fn author_deletion() {
     let create_response = client
         .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
-        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
+        .body(r#"{"name":"JRR Tolkien", "nationality":"British"}"#)
         .send()
         .await
         .expect("Failed to execute request.");

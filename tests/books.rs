@@ -95,7 +95,7 @@ async fn books_index() {
     client
         .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
-        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
+        .body(r#"{"name":"JRR Tolkien", "nationality":"British"}"#)
         .send()
         .await
         .expect("Failed to execute request.");
@@ -141,7 +141,7 @@ async fn show_book() {
     client
         .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
-        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
+        .body(r#"{"name":"JRR Tolkien", "nationality":"British"}"#)
         .send()
         .await
         .expect("Failed to execute request.");
@@ -185,7 +185,7 @@ async fn book_creation() {
     client
         .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
-        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
+        .body(r#"{"name":"JRR Tolkien", "nationality":"British"}"#)
         .send()
         .await
         .expect("Failed to execute request.");
@@ -223,7 +223,7 @@ async fn book_creation_with_incomplete_data() {
     client
         .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
-        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
+        .body(r#"{"name":"JRR Tolkien", "nationality":"British"}"#)
         .send()
         .await
         .expect("Failed to execute request.");
@@ -253,7 +253,7 @@ async fn book_deletion() {
     client
         .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
-        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
+        .body(r#"{"name":"JRR Tolkien", "nationality":"British"}"#)
         .send()
         .await
         .expect("Failed to execute request.");
