@@ -119,18 +119,17 @@ async fn books_index() {
         .send()
         .await
         .expect("Failed to execute request.");
-
-    assert!(response.status().is_success());
-
-    let parsed_response = &response
-        .text_with_charset("utf-8")
+    let parsed_response = response
+        .json::<Value>()
         .await
-        .expect("could not parse");
+        .expect("Failed to deserialize response body.");
 
-    assert!(parsed_response.contains(r#""title":"Lord of the rings""#));
-    assert!(parsed_response.contains(r#""title":"The Hobbit""#));
-    assert!(parsed_response.contains(r#""author":"JRR Tolkien""#));
-    assert!(parsed_response.contains(r#""genre":"Fiction""#));
+    assert_eq!(parsed_response[0]["title"], "Lord of the rings");
+    assert_eq!(parsed_response[0]["author"], "JRR Tolkien");
+    assert_eq!(parsed_response[0]["genre"], "Fiction");
+    assert_eq!(parsed_response[1]["title"], "The Hobbit");
+    assert_eq!(parsed_response[1]["author"], "JRR Tolkien");
+    assert_eq!(parsed_response[1]["genre"], "Fiction");
 
     drop_db(app.db_name, app.db_url).await;
 }
@@ -166,7 +165,6 @@ async fn show_book() {
         .send()
         .await
         .expect("Failed to execute request.");
-
     let response_body2 = response
         .json::<Value>()
         .await
@@ -176,6 +174,8 @@ async fn show_book() {
     assert_eq!(response_body2["author"], "JRR Tolkien");
     assert_eq!(response_body2["genre"], "Fiction");
     assert_eq!(response_body2["id"], book_id);
+
+    drop_db(app.db_name, app.db_url).await;
 }
 
 #[tokio::test]
@@ -189,16 +189,14 @@ async fn book_creation() {
         .send()
         .await
         .expect("Failed to execute request.");
-    let body = r#"{"title":"Lord of the Rings", "author":"JRR Tolkien", "genre": "Fiction"}"#;
 
     let response = client
         .post(format!("http://{}/books/create", app.address))
         .header("Content-Type", "application/json")
-        .body(body)
+        .body(r#"{"title":"Lord of the Rings", "author":"JRR Tolkien", "genre": "Fiction"}"#)
         .send()
         .await
         .expect("Failed to execute request.");
-
     let record = sqlx::query!(
         r#"SELECT  books.id,
             books.title,
@@ -229,26 +227,21 @@ async fn book_creation_with_incomplete_data() {
         .send()
         .await
         .expect("Failed to execute request.");
-    let body = r#"{"title":"Lord of the Rings", "author":"JRR Tolkien"}"#;
 
     let response = client
         .post(format!("http://{}/books/create", app.address))
         .header("Content-Type", "application/json")
-        .body(body)
+        .body(r#"{"title":"Lord of the Rings", "author":"JRR Tolkien"}"#)
         .send()
         .await
         .expect("Failed to execute request.");
-
-    assert!(response.status().is_client_error());
-
     let record = sqlx::query!("SELECT * FROM books")
         .fetch_optional(&app.db_pool)
         .await
         .expect("Failed to fetch saved book.");
-    assert!(
-        record.is_none(),
-        "Record creation wasn't prevented successfully."
-    );
+
+    assert!(response.status().is_client_error());
+    assert!(record.is_none());
 
     drop_db(app.db_name, app.db_url).await;
 }
@@ -264,7 +257,6 @@ async fn book_deletion() {
         .send()
         .await
         .expect("Failed to execute request.");
-
     let create_response = client
         .post(format!("http://{}/books/create", app.address))
         .header("Content-Type", "application/json")
@@ -272,7 +264,6 @@ async fn book_deletion() {
         .send()
         .await
         .expect("Failed to execute request.");
-
     let response_body = create_response
         .json::<Value>()
         .await
@@ -288,12 +279,12 @@ async fn book_deletion() {
         .send()
         .await
         .expect("Failed to execute request.");
-
     let record = sqlx::query!("SELECT * FROM books")
         .fetch_optional(&app.db_pool)
         .await
         .expect("Failed to fetch saved book.");
 
-    assert!(record.is_none(), "Record was not deleted successfully.");
+    assert!(record.is_none());
+
     drop_db(app.db_name, app.db_url).await;
 }

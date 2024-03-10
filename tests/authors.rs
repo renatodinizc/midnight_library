@@ -112,17 +112,15 @@ async fn authors_index() {
         .send()
         .await
         .expect("Failed to execute request.");
-
-    assert!(response.status().is_success());
-    let parsed_response = &response
-        .text_with_charset("utf-8")
+    let parsed_response = response
+        .json::<Value>()
         .await
-        .expect("could not parse");
+        .expect("Failed to deserialize response body.");
 
-    assert!(parsed_response.contains(r#""name":"JRR Tolkien""#));
-    assert!(parsed_response.contains(r#""nationality":"Britain""#));
-    assert!(parsed_response.contains(r#""name":"Herman Melville""#));
-    assert!(parsed_response.contains(r#""nationality":"American""#));
+    assert_eq!(parsed_response[0]["name"], "JRR Tolkien");
+    assert_eq!(parsed_response[0]["nationality"], "Britain");
+    assert_eq!(parsed_response[1]["name"], "Herman Melville");
+    assert_eq!(parsed_response[1]["nationality"], "American");
 
     drop_db(app.db_name, app.db_url).await;
 }
@@ -160,18 +158,19 @@ async fn show_author() {
     assert_eq!(response_body2["name"], "JRR Tolkien");
     assert_eq!(response_body2["nationality"], "Britain");
     assert_eq!(response_body2["id"], author_id);
+
+    drop_db(app.db_name, app.db_url).await;
 }
 
 #[tokio::test]
 async fn author_creation() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let body = r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#;
 
     let response = client
         .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
-        .body(body)
+        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
         .send()
         .await
         .expect("Failed to execute request.");
@@ -201,18 +200,13 @@ async fn author_creation_with_incomplete_data() {
         .send()
         .await
         .expect("Failed to execute request.");
-
     let record = sqlx::query!("SELECT * FROM authors")
         .fetch_optional(&app.db_pool)
         .await
         .expect("Failed to fetch saved author.");
 
     assert!(response.status().is_client_error());
-
-    assert!(
-        record.is_none(),
-        "Record creation wasn't prevented successfully."
-    );
+    assert!(record.is_none());
 
     drop_db(app.db_name, app.db_url).await;
 }
@@ -221,16 +215,13 @@ async fn author_creation_with_incomplete_data() {
 async fn author_deletion() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
-    let body = r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#;
-
     let create_response = client
         .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
-        .body(body)
+        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
         .send()
         .await
         .expect("Failed to execute request.");
-
     let response_body = create_response
         .json::<Value>()
         .await
@@ -246,7 +237,6 @@ async fn author_deletion() {
         .send()
         .await
         .expect("Failed to execute request.");
-
     let record = sqlx::query!("SELECT * FROM authors")
         .fetch_optional(&app.db_pool)
         .await
