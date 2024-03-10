@@ -1,7 +1,6 @@
 use crate::validations::author::NewAuthor;
 use actix_web::{
-    http::header::ContentType,
-    web::{Data, Json},
+    web::{Data, Json, Path},
     HttpResponse,
 };
 use chrono::Utc;
@@ -31,6 +30,30 @@ pub async fn authors_index(db_pool: Data<PgPool>) -> HttpResponse {
     HttpResponse::Ok().json(authors)
 }
 
+pub async fn show_author(input: Path<String>, db_pool: Data<PgPool>) -> HttpResponse {
+    let author_id = input.into_inner();
+
+    match sqlx::query!(
+        "SELECT id, name, nationality, created_at FROM authors WHERE id = $1",
+        Uuid::parse_str(&author_id).unwrap_or_default()
+    )
+    .fetch_one(db_pool.get_ref())
+    .await
+    {
+        Ok(author) => {
+            let author_json = json!({
+                "id": author.id,
+                "name": author.name,
+                "nationality": author.nationality,
+                "created_at": author.created_at
+            });
+
+            HttpResponse::Ok().json(author_json)
+        }
+        Err(e) => HttpResponse::BadRequest().body(e.to_string()),
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct NewAuthorData {
     pub name: String,
@@ -45,17 +68,19 @@ pub async fn create_author(input: Json<NewAuthorData>, db_pool: Data<PgPool>) ->
 
     match sqlx::query!(
         "INSERT INTO authors (name, nationality, created_at)
-        VALUES ($1, $2, $3)",
+        VALUES ($1, $2, $3)
+        RETURNING id",
         new_author.name.as_ref(),
         new_author.nationality.as_ref(),
         Utc::now()
     )
-    .execute(db_pool.get_ref())
+    .fetch_one(db_pool.get_ref())
     .await
     {
-        Ok(_) => HttpResponse::Ok()
-            .content_type(ContentType::plaintext())
-            .body("Author created successfully!\n"),
+        Ok(record) => HttpResponse::Ok().json(json!({
+            "message": "Author created successfully!",
+            "author_id": record.id
+        })),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
 }
@@ -74,12 +99,10 @@ pub async fn delete_author(input: Json<AuthorId>, db_pool: Data<PgPool>) -> Http
     .await
     {
         Ok(result) => match result.rows_affected() == 1 {
-            true => HttpResponse::Ok()
-                .content_type(ContentType::plaintext())
-                .body("Author deleted successfully!\n"),
-            false => HttpResponse::NotFound()
-                .content_type(ContentType::plaintext())
-                .body("Author to be deleted not found!\n"),
+            true => HttpResponse::Ok().json(json!({"message": "Author deleted successfully!"})),
+            false => {
+                HttpResponse::NotFound().json(json!({"message": "Author to be deleted not found"}))
+            }
         },
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }

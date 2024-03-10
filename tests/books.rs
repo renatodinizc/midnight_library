@@ -1,4 +1,5 @@
 use bookstore_api::{configuration, startup::run};
+use serde_json::Value;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;
@@ -98,7 +99,6 @@ async fn books_index() {
         .send()
         .await
         .expect("Failed to execute request.");
-
     client
         .post(format!("http://{}/books/create", app.address))
         .header("Content-Type", "application/json")
@@ -106,7 +106,6 @@ async fn books_index() {
         .send()
         .await
         .expect("Failed to execute request.");
-
     client
         .post(format!("http://{}/books/create", app.address))
         .header("Content-Type", "application/json")
@@ -137,6 +136,49 @@ async fn books_index() {
 }
 
 #[tokio::test]
+async fn show_book() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    client
+        .post(format!("http://{}/authors/create", app.address))
+        .header("Content-Type", "application/json")
+        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
+        .send()
+        .await
+        .expect("Failed to execute request.");
+    let create_response = client
+        .post(format!("http://{}/books/create", app.address))
+        .header("Content-Type", "application/json")
+        .body(r#"{"title":"Lord of the rings", "author":"JRR Tolkien", "genre": "Fiction"}"#)
+        .send()
+        .await
+        .expect("Failed to execute request.");
+    let response_body = create_response
+        .json::<Value>()
+        .await
+        .expect("Failed to deserialize response body.");
+    let book_id = response_body["book_id"]
+        .as_str()
+        .expect("Failed to extract author id from response.");
+
+    let response = client
+        .get(format!("http://{}/books/{}", app.address, book_id))
+        .send()
+        .await
+        .expect("Failed to execute request.");
+
+    let response_body2 = response
+        .json::<Value>()
+        .await
+        .expect("Failed to deserialize response body.");
+
+    assert_eq!(response_body2["title"], "Lord of the rings");
+    assert_eq!(response_body2["author"], "JRR Tolkien");
+    assert_eq!(response_body2["genre"], "Fiction");
+    assert_eq!(response_body2["id"], book_id);
+}
+
+#[tokio::test]
 async fn book_creation() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
@@ -157,15 +199,6 @@ async fn book_creation() {
         .await
         .expect("Failed to execute request.");
 
-    assert!(response.status().is_success());
-    assert_eq!(
-        "Book created successfully!\n",
-        response
-            .text_with_charset("utf-8")
-            .await
-            .expect("could not parse")
-    );
-
     let record = sqlx::query!(
         r#"SELECT  books.id,
             books.title,
@@ -177,6 +210,7 @@ async fn book_creation() {
     .await
     .expect("Failed to fetch saved book.");
 
+    assert!(response.status().is_success());
     assert_eq!(record.title, "Lord of the Rings");
     assert_eq!(record.authors_name, "JRR Tolkien");
     assert_eq!(record.genre, "Fiction");
@@ -231,7 +265,7 @@ async fn book_deletion() {
         .await
         .expect("Failed to execute request.");
 
-    client
+    let create_response = client
         .post(format!("http://{}/books/create", app.address))
         .header("Content-Type", "application/json")
         .body(r#"{"title":"Lord of the Rings", "author":"JRR Tolkien", "genre": "Fiction"}"#)
@@ -239,15 +273,18 @@ async fn book_deletion() {
         .await
         .expect("Failed to execute request.");
 
-    let created_record = sqlx::query!("SELECT * FROM books")
-        .fetch_one(&app.db_pool)
+    let response_body = create_response
+        .json::<Value>()
         .await
-        .expect("Failed to fetch saved book.");
+        .expect("Failed to deserialize response body.");
+    let book_id = response_body["book_id"]
+        .as_str()
+        .expect("Failed to extract author id from response.");
 
     client
         .post(format!("http://{}/books/delete", app.address))
         .header("Content-Type", "application/json")
-        .body(format!(r#"{{"id": "{}"}}"#, created_record.id))
+        .body(format!(r#"{{"id": "{}"}}"#, book_id))
         .send()
         .await
         .expect("Failed to execute request.");

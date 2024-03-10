@@ -1,6 +1,5 @@
 use actix_web::{
-    http::header::ContentType,
-    web::{Data, Json},
+    web::{Data, Json, Path},
     HttpResponse,
 };
 use chrono::Utc;
@@ -44,6 +43,40 @@ pub async fn books_index(db_pool: Data<PgPool>) -> HttpResponse {
     HttpResponse::Ok().json(books)
 }
 
+pub async fn show_book(info: Path<String>, db_pool: Data<PgPool>) -> HttpResponse {
+    let book_id = info.into_inner();
+    match sqlx::query!(
+        r#"
+        SELECT
+            books.id,
+            books.title,
+            authors.name AS "authors_name",
+            books.genre,
+            books.created_at
+        FROM books
+        JOIN authors ON books.author_id = authors.id
+        WHERE books.id = $1
+        "#,
+        Uuid::parse_str(&book_id).unwrap_or_default(),
+    )
+    .fetch_one(db_pool.get_ref())
+    .await
+    {
+        Ok(book) => {
+            let book_json = json!({
+                "id": book.id,
+                "title": book.title,
+                "author": book.authors_name,
+                "genre": book.genre,
+                "created_at": book.created_at
+            });
+
+            HttpResponse::Ok().json(book_json)
+        }
+        Err(e) => HttpResponse::BadRequest().body(e.to_string()),
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NewBookData {
     pub title: String,
@@ -69,18 +102,21 @@ pub async fn create_book(input: Json<NewBookData>, db_pool: Data<PgPool>) -> Htt
     };
 
     match sqlx::query!(
-        "INSERT INTO books (title, genre, author_id, created_at) VALUES ($1, $2, $3, $4)",
+        "INSERT INTO books (title, genre, author_id, created_at)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id",
         new_book.title.as_ref(),
         new_book.genre.as_ref(),
         author.id,
         Utc::now()
     )
-    .execute(db_pool.get_ref())
+    .fetch_one(db_pool.get_ref())
     .await
     {
-        Ok(_) => HttpResponse::Ok()
-            .content_type(ContentType::plaintext())
-            .body("Book created successfully!\n"),
+        Ok(record) => HttpResponse::Ok().json(json!({
+            "message": "Book created successfully!",
+            "book_id": record.id
+        })),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
 }
@@ -99,12 +135,10 @@ pub async fn delete_book(input: Json<BookId>, db_pool: Data<PgPool>) -> HttpResp
     .await
     {
         Ok(result) => match result.rows_affected() == 1 {
-            true => HttpResponse::Ok()
-                .content_type(ContentType::plaintext())
-                .body("Book deleted successfully!\n"),
-            false => HttpResponse::NotFound()
-                .content_type(ContentType::plaintext())
-                .body("Book to be deleted not found!\n"),
+            true => HttpResponse::Ok().json(json!({"message": "Book deleted successfully!"})),
+            false => {
+                HttpResponse::NotFound().json(json!({"message": "Book to be deleted not found"}))
+            }
         },
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }

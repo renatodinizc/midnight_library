@@ -1,4 +1,5 @@
 use bookstore_api::{configuration, startup::run};
+use serde_json::Value;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;
@@ -127,6 +128,41 @@ async fn authors_index() {
 }
 
 #[tokio::test]
+async fn show_author() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let create_response = client
+        .post(format!("http://{}/authors/create", app.address))
+        .header("Content-Type", "application/json")
+        .body(r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#)
+        .send()
+        .await
+        .expect("Failed to execute request.");
+    let response_body = create_response
+        .json::<Value>()
+        .await
+        .expect("Failed to deserialize response body.");
+    let author_id = response_body["author_id"]
+        .as_str()
+        .expect("Failed to extract author id from response.");
+
+    let response = client
+        .get(format!("http://{}/authors/{}", app.address, author_id))
+        .send()
+        .await
+        .expect("Failed to execute request.");
+
+    let response_body2 = response
+        .json::<Value>()
+        .await
+        .expect("Failed to deserialize response body.");
+
+    assert_eq!(response_body2["name"], "JRR Tolkien");
+    assert_eq!(response_body2["nationality"], "Britain");
+    assert_eq!(response_body2["id"], author_id);
+}
+
+#[tokio::test]
 async fn author_creation() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
@@ -140,20 +176,12 @@ async fn author_creation() {
         .await
         .expect("Failed to execute request.");
 
-    assert!(response.status().is_success());
-    assert_eq!(
-        "Author created successfully!\n",
-        response
-            .text_with_charset("utf-8")
-            .await
-            .expect("could not parse")
-    );
-
     let record = sqlx::query!("SELECT * FROM authors")
         .fetch_one(&app.db_pool)
         .await
         .expect("Failed to fetch saved author.");
 
+    assert!(response.status().is_success());
     assert_eq!(record.name, "JRR Tolkien");
     assert_eq!(record.nationality, "Britain");
 
@@ -195,7 +223,7 @@ async fn author_deletion() {
     let client = reqwest::Client::new();
     let body = r#"{"name":"JRR Tolkien", "nationality":"Britain"}"#;
 
-    client
+    let create_response = client
         .post(format!("http://{}/authors/create", app.address))
         .header("Content-Type", "application/json")
         .body(body)
@@ -203,15 +231,18 @@ async fn author_deletion() {
         .await
         .expect("Failed to execute request.");
 
-    let created_record = sqlx::query!("SELECT * FROM authors")
-        .fetch_one(&app.db_pool)
+    let response_body = create_response
+        .json::<Value>()
         .await
-        .expect("Failed to fetch saved author.");
+        .expect("Failed to deserialize response body.");
+    let author_id = response_body["author_id"]
+        .as_str()
+        .expect("Failed to extract author id from response.");
 
     client
         .post(format!("http://{}/authors/delete", app.address))
         .header("Content-Type", "application/json")
-        .body(format!(r#"{{"id": "{}"}}"#, created_record.id))
+        .body(format!(r#"{{"id": "{}"}}"#, author_id))
         .send()
         .await
         .expect("Failed to execute request.");
