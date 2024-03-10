@@ -1,4 +1,4 @@
-### BookstoreApi: Rust Book Management System
+### A Rust Bookstore Management System
 
 ```
  ____              _        _                                  _ 
@@ -10,7 +10,7 @@
                                                         | |      
                                                         |_|    
 ```
-A comprehensive Rust web application for managing books. This project is designed to demonstrate the capabilities of Rust in building efficient, safe web applications. It features book management functionalities including listing, adding, and retrieving book details. The system also includes health checking and configuration management, ensuring a robust and customizable solution.
+A comprehensive Rust web application for managing a bookstore. This project is designed to demonstrate the capabilities of Rust in building efficient, safe web applications. It features bookstore management functionalities including listing, adding, and retrieving book and authors details. The system also includes health checking and configuration management, ensuring a robust and customizable solution.
 
 ### Installation and Setup
 
@@ -40,18 +40,51 @@ A comprehensive Rust web application for managing books. This project is designe
 
 ### Usage
 
-After setting up the project, you can start interacting with the book management system. The application exposes endpoints for book operations and health checks. Use a tool like `curl` or Postman to interact with the API.
+After setting up the project, you can start interacting with the book management system. The application exposes endpoints for book and author operations and health checks. Use a tool like `curl` or Postman to interact with the API.
 
 #### Examples:
 
-- **Add a Book:**
+- **Add an Author:**
   ```shell
-  curl -X POST http://localhost:8080/books -d '{"title": "Book Title", "author": "Author Name", "genre": "Preferred Genre}'
+    curl -X POST http://localhost:8080/books -d '{"name": "Herman Melville", "nationality": "American"}'
+    # { "author_id": "e457c912-5a04-4bfc-abeb-5a0e2fe91a72", "message": "Author created successfully!" }
   ```
 
 - **List Books:**
   ```shell
   curl http://localhost:8080/books
+  #[
+  #  {
+  #      "author": "Eiichiro Oda",
+  #      "created_at": "2024-03-10T10:22:58.244130Z",
+  #      "genre": "Shounen",
+  #      "id": "a56de2a8-61d3-43f4-b66b-b454c2b54589",
+  #      "title": "One Piece"
+  #  },
+  #  {
+  #      "author": "Akira Toriyama",
+  #      "created_at": "2024-03-10T14:28:44.178201Z",
+  #      "genre": "Shounen",
+  #      "id": "82648e74-3fb4-4fe2-a4a2-5f6db5d20d3b",
+  #      "title": "Dragon Ball"
+  #  },
+  #]
+  ```
+- **Show details of an Author:**
+  ```shell
+  curl http://localhost:8080/authors/a56de2a8-61d3-43f4-b66b-b454c2b54589
+  #{
+  #  "created_at": "2024-03-10T10:22:58.244130Z",
+  #  "id": "a56de2a8-61d3-43f4-b66b-b454c2b54589",
+  #  "name": "Eiichiro Oda",
+  #  "nationality": "Japanese"
+  #}
+  ```
+
+- **Delete a Book:**
+  ```shell
+    curl -X POST http://localhost:8080/authors/delete -d '{"id": "f6eed69c-d93a-48ff-b80b-dfdf4df061fa"}'
+    # { "message": "Book deleted successfully!" }
   ```
 
 - **Health Check:**
@@ -61,7 +94,8 @@ After setting up the project, you can start interacting with the book management
 
 ### Features
 
-- **Book Management:** Add, list, and retrieve books.
+- **Book Management:** Add, list, show details and retrieve books.
+- **Author Management:** Add, list, show details and retrieve authors.
 - **Health Check Endpoint:** Verify the application status.
 - **Configuration Management:** Customize application settings.
 
