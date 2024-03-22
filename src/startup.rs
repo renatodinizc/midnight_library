@@ -17,6 +17,7 @@ pub fn run(address: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Err
             .route("/authors/{author_id}", web::get().to(routes::show_author))
             .route("/authors/create", web::post().to(routes::create_author))
             .route("/authors/delete", web::post().to(routes::delete_author))
+            .route("/users/create", web::post().to(routes::create_user))
             .app_data(db_pool.clone())
     })
     .listen(address)?
