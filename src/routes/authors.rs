@@ -5,7 +5,7 @@ use actix_web::{
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -106,4 +106,47 @@ pub async fn delete_author(input: Json<AuthorId>, db_pool: Data<PgPool>) -> Http
         },
         Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
     }
+}
+
+pub async fn seed_authors(db_pool: Data<PgPool>) -> HttpResponse {
+    let client = reqwest::Client::new();
+
+    let response = client
+        .get("https://gutendex.com/books/")
+        .header("Content-Type", "application/json")
+        .send()
+        .await
+        .expect("Failed to execute request.");
+
+    let response_body = response
+        .json::<Value>()
+        .await
+        .expect("Failed to deserialize response body.");
+
+    if let Some(books) = response_body["results"].as_array() {
+        for book in books.iter() {
+            let first_author = book["authors"]
+                .as_array()
+                .and_then(|authors| authors.first())
+                .and_then(|attributes| attributes["name"].as_str())
+                .unwrap_or("Default Author");
+
+            match sqlx::query!(
+                "INSERT INTO authors (name, nationality, created_at)
+                VALUES ($1, $2, $3)
+                RETURNING id",
+                first_author,
+                "Custom nationality",
+                Utc::now()
+            )
+            .fetch_one(db_pool.get_ref())
+            .await
+            {
+                Ok(value) => println!("{:?}", value),
+                Err(e) => println!("{e}"),
+            }
+        }
+    }
+
+    HttpResponse::Ok().json(response_body)
 }
