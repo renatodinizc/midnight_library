@@ -86,3 +86,87 @@ pub async fn drop_db(name: String, db_url: String) {
         .await
         .expect("Failed to drop database");
 }
+
+impl TestApp {
+    pub async fn create_author(&self, body: String) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(format!("http://{}/authors/create", &self.address))
+            .header("Content-Type", "application/json")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn delete_author(&self, body: String) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(format!("http://{}/authors/delete", &self.address))
+            .header("Content-Type", "application/json")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn author_index(&self) -> reqwest::Response {
+        reqwest::Client::new()
+            .get(format!("http://{}/authors", &self.address))
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn show_author(&self, author_id: String) -> reqwest::Response {
+        reqwest::Client::new()
+            .get(format!("http://{}/authors/{}", &self.address, author_id))
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn create_book(&self, body: String) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(format!("http://{}/books/create", &self.address))
+            .header("Content-Type", "application/json")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn book_index(&self) -> reqwest::Response {
+        reqwest::Client::new()
+            .get(format!("http://{}/books", &self.address))
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn show_book(&self, book_id: String) -> reqwest::Response {
+        reqwest::Client::new()
+            .get(format!("http://{}/books/{}", &self.address, book_id))
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn book_delete(&self, body: String) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(format!("http://{}/books/delete", &self.address))
+            .header("Content-Type", "application/json")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn create_user(&self, body: String) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(format!("http://{}/users/create", &self.address))
+            .header("Content-Type", "application/json")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+}

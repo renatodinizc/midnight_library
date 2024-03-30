@@ -4,27 +4,12 @@ use serde_json::Value;
 #[tokio::test]
 async fn authors_index() {
     let app = spawn_app().await;
-    let client = reqwest::Client::new();
-    client
-        .post(format!("http://{}/authors/create", app.address))
-        .header("Content-Type", "application/json")
-        .body(r#"{"name":"JRR Tolkien", "nationality":"British"}"#)
-        .send()
-        .await
-        .expect("Failed to execute request.");
-    client
-        .post(format!("http://{}/authors/create", app.address))
-        .header("Content-Type", "application/json")
-        .body(r#"{"name":"Herman Melville", "nationality":"American"}"#)
-        .send()
-        .await
-        .expect("Failed to execute request.");
+    app.create_author(r#"{"name":"JRR Tolkien", "nationality":"British"}"#.into())
+        .await;
+    app.create_author(r#"{"name":"Herman Melville", "nationality":"American"}"#.into())
+        .await;
 
-    let response = client
-        .get(format!("http://{}/authors", app.address))
-        .send()
-        .await
-        .expect("Failed to execute request.");
+    let response = app.author_index().await;
     let parsed_response = response
         .json::<Value>()
         .await
@@ -41,14 +26,9 @@ async fn authors_index() {
 #[tokio::test]
 async fn show_author() {
     let app = spawn_app().await;
-    let client = reqwest::Client::new();
-    let create_response = client
-        .post(format!("http://{}/authors/create", app.address))
-        .header("Content-Type", "application/json")
-        .body(r#"{"name":"JRR Tolkien", "nationality":"British"}"#)
-        .send()
-        .await
-        .expect("Failed to execute request.");
+    let create_response = app
+        .create_author(r#"{"name":"JRR Tolkien", "nationality":"British"}"#.into())
+        .await;
     let response_body = create_response
         .json::<Value>()
         .await
@@ -57,12 +37,7 @@ async fn show_author() {
         .as_str()
         .expect("Failed to extract author id from response.");
 
-    let response = client
-        .get(format!("http://{}/authors/{}", app.address, author_id))
-        .send()
-        .await
-        .expect("Failed to execute request.");
-
+    let response = app.show_author(author_id.into()).await;
     let response_body2 = response
         .json::<Value>()
         .await
@@ -78,16 +53,9 @@ async fn show_author() {
 #[tokio::test]
 async fn author_creation() {
     let app = spawn_app().await;
-    let client = reqwest::Client::new();
+    let body = r#"{"name":"JRR Tolkien", "nationality":"British"}"#;
 
-    let response = client
-        .post(format!("http://{}/authors/create", app.address))
-        .header("Content-Type", "application/json")
-        .body(r#"{"name":"JRR Tolkien", "nationality":"British"}"#)
-        .send()
-        .await
-        .expect("Failed to execute request.");
-
+    let response = app.create_author(body.into()).await;
     let record = sqlx::query!("SELECT * FROM authors")
         .fetch_one(&app.db_pool)
         .await
@@ -103,16 +71,9 @@ async fn author_creation() {
 #[tokio::test]
 async fn author_creation_with_incomplete_data() {
     let app = spawn_app().await;
-    let client = reqwest::Client::new();
     let body = r#"{"name":"JRR Tolkien"}"#;
 
-    let response = client
-        .post(format!("http://{}/authors/create", app.address))
-        .header("Content-Type", "application/json")
-        .body(body)
-        .send()
-        .await
-        .expect("Failed to execute request.");
+    let response = app.create_author(body.into()).await;
     let record = sqlx::query!("SELECT * FROM authors")
         .fetch_optional(&app.db_pool)
         .await
@@ -127,15 +88,10 @@ async fn author_creation_with_incomplete_data() {
 #[tokio::test]
 async fn author_deletion() {
     let app = spawn_app().await;
-    let client = reqwest::Client::new();
-    let create_response = client
-        .post(format!("http://{}/authors/create", app.address))
-        .header("Content-Type", "application/json")
-        .body(r#"{"name":"JRR Tolkien", "nationality":"British"}"#)
-        .send()
-        .await
-        .expect("Failed to execute request.");
-    let response_body = create_response
+    let response = app
+        .create_author(r#"{"name":"JRR Tolkien", "nationality":"British"}"#.into())
+        .await;
+    let response_body = response
         .json::<Value>()
         .await
         .expect("Failed to deserialize response body.");
@@ -143,18 +99,14 @@ async fn author_deletion() {
         .as_str()
         .expect("Failed to extract author id from response.");
 
-    client
-        .post(format!("http://{}/authors/delete", app.address))
-        .header("Content-Type", "application/json")
-        .body(format!(r#"{{"id": "{}"}}"#, author_id))
-        .send()
-        .await
-        .expect("Failed to execute request.");
+    app.delete_author(format!(r#"{{"id": "{}"}}"#, author_id))
+        .await;
     let record = sqlx::query!("SELECT * FROM authors")
         .fetch_optional(&app.db_pool)
         .await
         .expect("Failed to fetch saved author.");
 
     assert!(record.is_none(), "Record was not deleted successfully.");
+
     drop_db(app.db_name, app.db_url).await;
 }
