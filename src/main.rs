@@ -1,6 +1,6 @@
 use std::net::TcpListener;
 
-use bookstore_api::{configuration::get_configuration, startup::run};
+use midnight_library::{configuration::get_configuration, startup::run};
 use sqlx::PgPool;
 
 #[tokio::main]

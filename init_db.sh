@@ -20,7 +20,7 @@ fi
 
 DB_USER="${POSTGRES_USER:=postgres}"
 DB_PASSWORD="${POSTGRES_PASSWORD:=password}"
-DB_NAME="${POSTGRES_DB:=bookstore_api}"
+DB_NAME="${POSTGRES_DB:=midnight_library}"
 DB_PORT="${POSTGRES_PORT:=5432}"
 DB_HOST="${POSTGRES_HOST:=localhost}"
 
@@ -34,7 +34,7 @@ if ! docker ps --filter "publish=${DB_PORT}" --format "{{.Ports}}" | grep -q "${
     -e POSTGRES_PASSWORD=${DB_PASSWORD} \
     -e POSTGRES_DB=${DB_NAME} \
     -p "${DB_PORT}":5432 \
-    --name bookstore_db \
+    --name library_db \
     -d postgres \
     postgres -N 1000 # Increased maximum number of connections for testing purposes
 else

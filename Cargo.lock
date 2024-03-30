@@ -342,22 +342,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bookstore_api"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "chrono",
- "config",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "uuid",
-]
-
-[[package]]
 name = "brotli"
 version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1236,6 +1220,22 @@ name = "memchr"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
+
+[[package]]
+name = "midnight_library"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "chrono",
+ "config",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "uuid",
+]
 
 [[package]]
 name = "mime"

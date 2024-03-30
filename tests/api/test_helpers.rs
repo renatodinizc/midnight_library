@@ -1,4 +1,4 @@
-use bookstore_api::{configuration, startup::run};
+use midnight_library::{configuration, startup::run};
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;

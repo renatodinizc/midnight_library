@@ -1,16 +1,11 @@
-### A Rust Bookstore Management System
+```
+|\/|. _| _ . _ |_ _|_  | .|_  _ _  _
+|  ||(_|| ||(_|| | |   |_||_)| (_|| \/
+             _|                     /
+```
+### A Rust Library Management System
 
-```
- ____              _        _                                  _ 
-|  _ \            | |      | |                     /\         (_)
-| |_) | ___   ___ | | _____| |_ ___  _ __ ___     /  \   _ __  _ 
-|  _ < / _ \ / _ \| |/ / __| __/ _ \| '__/ _ \   / /\ \ | '_ \| |
-| |_) | (_) | (_) |   <\__ \ || (_) | | |  __/  / ____ \| |_) | |
-|____/ \___/ \___/|_|\_\___/\__\___/|_|  \___| /_/    \_\ .__/|_|
-                                                        | |      
-                                                        |_|    
-```
-A comprehensive Rust web application for managing a bookstore. This project is designed to demonstrate the capabilities of Rust in building efficient, safe web applications. It features bookstore management functionalities including listing, adding, and retrieving book and authors details. The system also includes health checking and configuration management, ensuring a robust and customizable solution.
+A comprehensive Rust web application for managing a library. This project is designed to demonstrate the capabilities of Rust in building efficient, safe web applications. It features library management functionalities including listing, adding, and retrieving book and authors details. The system also includes health checking and configuration management, ensuring a robust and customizable solution.
 
 ### Installation and Setup
 
@@ -25,7 +20,7 @@ A comprehensive Rust web application for managing a bookstore. This project is d
      chmod +x init_db.sh
      ./init_db.sh
      ```
-   This script checks for necessary dependencies (`psql` and `sqlx`), sets up environment variables for database credentials, launches a PostgreSQL Docker container if needed, and runs database migrations to prepare the `bookstore_api` database.
+   This script checks for necessary dependencies (`psql` and `sqlx`), sets up environment variables for database credentials, launches a PostgreSQL Docker container if needed, and runs database migrations to prepare the `midnight_library` database.
 
 3. **Project Setup:**
    - Clone the repository and navigate into the project directory.
@@ -104,7 +99,7 @@ After setting up the project, you can start interacting with the book management
 We welcome contributions! Please feel free to fork the repository, make your changes, and submit a pull request.
 
 1. **Fork the Repository:** Click on the 'Fork' button at the top right of the page.
-2. **Clone Your Fork:** `git clone https://github.com/renatodinizc/bookstore_api.git`
+2. **Clone Your Fork:** `git clone https://github.com/renatodinizc/midnight_library.git`
 3. **Create a New Branch:** `git checkout -b new-feature`
 4. **Make Your Changes:** Implement your feature or fix.
 5. **Commit Your Changes:** `git commit -am 'Add some feature'`
