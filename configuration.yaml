@@ -1,4 +1,4 @@
-server_address: localhost:8080
+server_address: 0.0.0.0:8080
 database:
   username: postgres
   password: password

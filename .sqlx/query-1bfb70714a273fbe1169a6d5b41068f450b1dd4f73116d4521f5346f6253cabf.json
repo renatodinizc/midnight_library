@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            books.id,\n            books.title,\n            authors.name AS \"authors_name\",\n            books.genre,\n            books.created_at\n        FROM books\n        JOIN authors ON books.author_id = authors.id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "authors_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "genre",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "1bfb70714a273fbe1169a6d5b41068f450b1dd4f73116d4521f5346f6253cabf"
+}
